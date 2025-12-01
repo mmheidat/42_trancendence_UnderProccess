@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pong-frontend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./frontend/src:/app/src
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pong-backend
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/data:/app/data
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DATABASE_PATH=/app/data/pong.db
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - JWT_EXPIRES_IN=7d
+      - PORT=3000
+      - FRONTEND_URL=http://localhost:8080
+      - GOOGLE_CLIENT_ID=515413606423-ct71vhlneujpqu7tr1lkmkkq5rusfe00.apps.googleusercontent.com
+      - GOOGLE_CLIENT_SECRET=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
+      - GOOGLE_REDIRECT_URI=http://localhost:3001/api/auth/google/callback
+    restart: unless-stopped

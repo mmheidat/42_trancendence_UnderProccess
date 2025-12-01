@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 min-h-screen overflow-hidden">
+    
+    <!-- Auth Callback Handler - Should be FIRST and INDEPENDENT -->
+    <div id="authCallback" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 max-w-md w-full text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500 mx-auto mb-4"></div>
+            <h2 class="text-2xl font-bold text-white mb-2">Authenticating...</h2>
+            <p class="text-gray-400">Please wait while we sign you in with Google</p>
+        </div>
+    </div>
+
+    <!-- Login Card - Full screen overlay -->
+    <div id="loginCard" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 max-w-md w-full">
+            <h1 class="text-4xl font-bold text-center text-white mb-2">Welcome to Pong</h1>
+            <p class="text-gray-400 text-center mb-8">Sign in to start playing</p>
+            
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        required
+                        class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="Enter your username"
+                    >
+                </div>
+                
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                    <div class="relative">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            required
+                            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            placeholder="Enter your password"
+                        >
+                    </div>
+                </div>
+                
+                <button 
+                    type="submit" 
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 transform hover:scale-105"
+                >
+                    Sign In
+                </button>
+            </form>
+            
+            <div class="relative my-6">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-600"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-gray-800 text-gray-400">Or continue with</span>
+                </div>
+            </div>
+            
+            <button 
+                id="googleLogin"
+                class="w-full bg-white hover:bg-gray-100 text-gray-900 font-semibold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center space-x-2"
+            >
+                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                <span>Sign in with Google</span>
+            </button>
+            
+            <div class="mt-6 text-center text-gray-400 text-sm">
+                <p>Controls:</p>
+                <p class="mt-2">Player 1: <span class="text-purple-400">W/S</span> | Player 2: <span class="text-purple-400">↑/↓</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container (Hidden Initially) -->
+    <div id="mainApp" class="hidden flex flex-col min-h-screen">
+        <!-- Content Area -->
+        <div id="contentArea" class="flex-1 overflow-y-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <!-- Welcome Section -->
+                <div id="welcomeSection" class="text-center">
+                    <h2 id="playerNameDisplay" class="text-4xl font-bold text-white mb-4"></h2>
+                    <p class="text-gray-400 text-lg">Select an option from the menu above</p>
+                </div>
+        <!-- Navbar - Fixed at top -->
+        <nav class="bg-gray-800 shadow-lg sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center space-x-2 sm:space-x-4">
+                        <h1 class="text-xl sm:text-2xl font-bold text-white">Pong Game</h1>
+                        
+                        <!-- Language Selector -->
+                        <select id="languageSelector" class="hidden sm:block bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 transition duration-300 text-sm">
+                            <option value="en">English</option>
+                            <option value="es">Español</option>
+                            <option value="fr">Français</option>
+                            <option value="de">Deutsch</option>
+                            <option value="ar">العربية</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-center space-x-1 sm:space-x-2 overflow-x-auto">
+                        <!-- Play -->
+                        <button id="navPlay" class="nav-item flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="hidden lg:inline text-sm">Play</span>
+                        </button>
+                        
+                        <!-- Leaderboard -->
+                        <button id="navLeaderboard" class="nav-item flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            <span class="hidden lg:inline text-sm">Leaderboard</span>
+                        </button>
+                        
+                        <!-- Profile -->
+                        <button id="navProfile" class="nav-item flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                            <span class="hidden lg:inline text-sm">Profile</span>
+                        </button>
+                        
+                        <!-- Chat -->
+                        <button id="navChat" class="nav-item flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                            </svg>
+                            <span class="hidden lg:inline text-sm">Chat</span>
+                        </button>
+                        
+                        <!-- Settings -->
+                        <button id="navSettings" class="nav-item flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span class="hidden lg:inline text-sm">Settings</span>
+                        </button>
+                        
+                        <!-- Logout -->
+                        <button id="navLogout" class="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg text-red-400 hover:bg-red-900 hover:text-white transition duration-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                            </svg>
+                            <span class="hidden lg:inline text-sm">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+            <!-- Content Area - Flexible and scrollable -->
+            <div id="contentArea" class="flex-1 overflow-y-auto">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Welcome Message -->
+            <div id="welcomeSection" class="text-center">
+                <h2 id="playerNameDisplay" class="text-4xl font-bold text-white mb-4"></h2>
+                <p class="text-gray-400 text-lg">Select an option from the menu above</p>
+            </div>
+
+            <!-- Game Container -->
+            <div id="game-container" class="hidden">
+                <!-- Game Mode Selection -->
+                <div id="gameModeSelection" class="max-w-4xl mx-auto">
+                    <h2 class="text-3xl font-bold text-white mb-8 text-center">Choose Game Mode</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- VS AI Card -->
+                        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 hover:transform hover:scale-105 transition duration-300 cursor-pointer border-2 border-transparent hover:border-purple-500">
+                            <div class="text-center mb-6">
+                                <div class="text-6xl mb-4">🤖</div>
+                                <h3 class="text-2xl font-bold text-white mb-2">VS AI</h3>
+                                <p class="text-gray-400">Play against computer opponent</p>
+                            </div>
+                            <button id="selectAIMode" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300">
+                                Select
+                            </button>
+                        </div>
+                        
+                        <!-- Multiplayer Card -->
+                        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 hover:transform hover:scale-105 transition duration-300 cursor-pointer border-2 border-transparent hover:border-purple-500">
+                            <div class="text-center mb-6">
+                                <div class="text-6xl mb-4">👥</div>
+                                <h3 class="text-2xl font-bold text-white mb-2">Multiplayer</h3>
+                                <p class="text-gray-400">Play against other players online</p>
+                            </div>
+                            <button id="selectMultiplayerMode" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300">
+                                Select
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-8">
+                        <button id="backToMenu" class="text-gray-400 hover:text-white transition duration-300 flex items-center justify-center mx-auto space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
+                            <span>Back to Menu</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- AI Difficulty Selection -->
+                <div id="aiDifficultySelection" class="hidden max-w-4xl mx-auto">
+                    <h2 class="text-3xl font-bold text-white mb-8 text-center">Select Difficulty</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <!-- Easy -->
+                        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 hover:transform hover:scale-105 transition duration-300 cursor-pointer border-2 border-transparent hover:border-green-500">
+                            <div class="text-center mb-6">
+                                <div class="text-5xl mb-4">😊</div>
+                                <h3 class="text-2xl font-bold text-green-400 mb-2">Easy</h3>
+                                <p class="text-gray-400 text-sm">Perfect for beginners</p>
+                                <div class="mt-4 flex justify-center space-x-1">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                    <div class="w-3 h-3 bg-gray-600 rounded-full"></div>
+                                    <div class="w-3 h-3 bg-gray-600 rounded-full"></div>
+                                </div>
+                            </div>
+                            <button class="start-ai-game w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300" data-difficulty="easy">
+                                Play Easy
+                            </button>
+                        </div>
+                        
+                        <!-- Medium -->
+                        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 hover:transform hover:scale-105 transition duration-300 cursor-pointer border-2 border-transparent hover:border-yellow-500">
+                            <div class="text-center mb-6">
+                                <div class="text-5xl mb-4">😐</div>
+                                <h3 class="text-2xl font-bold text-yellow-400 mb-2">Medium</h3>
+                                <p class="text-gray-400 text-sm">A balanced challenge</p>
+                                <div class="mt-4 flex justify-center space-x-1">
+                                    <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                    <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                    <div class="w-3 h-3 bg-gray-600 rounded-full"></div>
+                                </div>
+                            </div>
+                            <button class="start-ai-game w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300" data-difficulty="medium">
+                                Play Medium
+                            </button>
+                        </div>
+                        
+                        <!-- Hard -->
+                        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 hover:transform hover:scale-105 transition duration-300 cursor-pointer border-2 border-transparent hover:border-red-500">
+                            <div class="text-center mb-6">
+                                <div class="text-5xl mb-4">😈</div>
+                                <h3 class="text-2xl font-bold text-red-400 mb-2">Hard</h3>
+                                <p class="text-gray-400 text-sm">For expert players</p>
+                                <div class="mt-4 flex justify-center space-x-1">
+                                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                </div>
+                            </div>
+                            <button class="start-ai-game w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300" data-difficulty="hard">
+                                Play Hard
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button id="backToGameMode" class="text-gray-400 hover:text-white transition duration-300 flex items-center justify-center mx-auto space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
+                            <span>Back to Game Modes</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Multiplayer Matchmaking -->
+                <div id="multiplayerMatchmaking" class="hidden max-w-2xl mx-auto">
+                    <div class="bg-gray-800 rounded-lg shadow-2xl p-8 text-center">
+                        <h2 class="text-3xl font-bold text-white mb-6">Finding Opponent...</h2>
+                        
+                        <!-- Animated Search -->
+                        <div class="mb-8">
+                            <div class="relative w-32 h-32 mx-auto">
+                                <div class="absolute inset-0 border-8 border-purple-500 rounded-full animate-ping"></div>
+                                <div class="absolute inset-0 border-8 border-purple-600 rounded-full animate-pulse"></div>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <svg class="w-16 h-16 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p class="text-gray-400 mb-2">Searching for players...</p>
+                        <p id="searchTimer" class="text-purple-400 font-bold text-xl mb-8">0:00</p>
+                        
+                        <div class="bg-gray-700 rounded-lg p-4 mb-6">
+                            <h4 class="text-white font-semibold mb-3">Players in queue</h4>
+                            <div class="flex justify-center space-x-4">
+                                <div class="flex flex-col items-center">
+                                    <div class="bg-purple-600 rounded-full w-12 h-12 flex items-center justify-center text-white font-bold mb-2">
+                                        <span id="queueCount">3</span>
+                                    </div>
+                                    <span class="text-gray-400 text-sm">Online</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button id="cancelMatchmaking" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300">
+                            Cancel Search
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Actual Game Canvas (Initially Hidden) -->
+                <div id="actualGameCanvas" class="hidden flex flex-col items-center">
+                    <div class="mb-4 text-center">
+                        <h3 id="gameMode" class="text-white text-xl font-bold mb-2"></h3>
+                        <p id="gameDifficulty" class="text-gray-400"></p>
+                    </div>
+                    <canvas id="gameCanvas" class="border-4 border-purple-500 rounded-lg shadow-2xl"></canvas>
+                    <div id="score" class="text-white text-3xl font-bold p-4 flex space-x-8">
+                        <span id="player1Score">0</span>
+                        <span class="text-purple-400">:</span>
+                        <span id="player2Score">0</span>
+                    </div>
+                    <button id="quitGame" class="mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-300">
+                        Quit Game
+                    </button>
+                </div>
+            </div>
+
+            <!-- Leaderboard Section -->
+            <div id="leaderboardSection" class="hidden">
+                <h2 class="text-3xl font-bold text-white mb-6 text-center">🏆 Top Players</h2>
+                
+                <!-- Top 3 Podium -->
+                <div class="flex justify-center items-end space-x-4 mb-8">
+                    <!-- 2nd Place -->
+                    <div class="flex flex-col items-center">
+                        <div class="bg-gray-700 rounded-lg p-6 w-40 h-48 flex flex-col items-center justify-center transform hover:scale-105 transition duration-300">
+                            <div class="text-6xl mb-2">🥈</div>
+                            <div class="text-white font-bold text-lg">Player 2</div>
+                            <div class="text-purple-400 text-2xl font-bold mt-2">850</div>
+                            <div class="text-gray-400 text-sm">points</div>
+                        </div>
+                        <div class="bg-gray-600 w-40 h-16 rounded-t-lg flex items-center justify-center text-white font-bold text-2xl">
+                            2
+                        </div>
+                    </div>
+                    
+                    <!-- 1st Place -->
+                    <div class="flex flex-col items-center">
+                        <div class="bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg p-6 w-48 h-56 flex flex-col items-center justify-center transform hover:scale-105 transition duration-300 shadow-2xl">
+                            <div class="text-6xl mb-2">👑</div>
+                            <div class="text-gray-900 font-bold text-xl">Player 1</div>
+                            <div class="text-gray-900 text-3xl font-bold mt-2">1200</div>
+                            <div class="text-gray-800 text-sm">points</div>
+                        </div>
+                        <div class="bg-yellow-500 w-48 h-20 rounded-t-lg flex items-center justify-center text-gray-900 font-bold text-3xl">
+                            1
+                        </div>
+                    </div>
+                    
+                    <!-- 3rd Place -->
+                    <div class="flex flex-col items-center">
+                        <div class="bg-gray-700 rounded-lg p-6 w-40 h-40 flex flex-col items-center justify-center transform hover:scale-105 transition duration-300">
+                            <div class="text-6xl mb-2">🥉</div>
+                            <div class="text-white font-bold text-lg">Player 3</div>
+                            <div class="text-purple-400 text-2xl font-bold mt-2">720</div>
+                            <div class="text-gray-400 text-sm">points</div>
+                        </div>
+                        <div class="bg-gray-600 w-40 h-12 rounded-t-lg flex items-center justify-center text-white font-bold text-xl">
+                            3
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional Rankings -->
+                <div class="bg-gray-800 rounded-lg shadow-xl p-6 max-w-2xl mx-auto">
+                    <h3 class="text-xl font-bold text-white mb-4">Other Rankings</h3>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between bg-gray-700 p-4 rounded-lg hover:bg-gray-600 transition duration-300">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-gray-400 font-bold text-lg w-8">4</span>
+                                <span class="text-white font-semibold">Player 4</span>
+                            </div>
+                            <span class="text-purple-400 font-bold">650 pts</span>
+                        </div>
+                        <div class="flex items-center justify-between bg-gray-700 p-4 rounded-lg hover:bg-gray-600 transition duration-300">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-gray-400 font-bold text-lg w-8">5</span>
+                                <span class="text-white font-semibold">Player 5</span>
+                            </div>
+                            <span class="text-purple-400 font-bold">580 pts</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Section -->
+<div id="profileSection" class="hidden">
+    <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-white mb-6">Player Profile</h2>
+        
+        <!-- Profile Header -->
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 mb-6">
+            <div class="flex items-center space-x-6">
+                <div class="bg-purple-600 rounded-full w-24 h-24 flex items-center justify-center text-white text-4xl font-bold">
+                    P1
+                </div>
+                <div>
+                    <h3 id="profilePlayerName" class="text-2xl font-bold text-white mb-2">Player Name</h3>
+                    <p class="text-gray-400">Member since: November 2024</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistics Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <!-- Win Rate -->
+            <div class="bg-gray-800 rounded-lg shadow-xl p-6 text-center">
+                <div class="text-5xl mb-2">📊</div>
+                <h4 class="text-gray-400 text-sm mb-2">Win Rate</h4>
+                <p class="text-4xl font-bold text-purple-400">65%</p>
+                <p class="text-gray-500 text-sm mt-2">13W - 7L</p>
+            </div>
+            
+            <!-- Total Games -->
+            <div class="bg-gray-800 rounded-lg shadow-xl p-6 text-center">
+                <div class="text-5xl mb-2">🎮</div>
+                <h4 class="text-gray-400 text-sm mb-2">Total Games</h4>
+                <p class="text-4xl font-bold text-purple-400">20</p>
+                <p class="text-gray-500 text-sm mt-2">Matches played</p>
+            </div>
+            
+            <!-- Longest Win Streak -->
+            <div class="bg-gray-800 rounded-lg shadow-xl p-6 text-center">
+                <div class="text-5xl mb-2">🔥</div>
+                <h4 class="text-gray-400 text-sm mb-2">Longest Streak</h4>
+                <p class="text-4xl font-bold text-orange-400">5</p>
+                <p class="text-gray-500 text-sm mt-2">Consecutive wins</p>
+            </div>
+        </div>
+        
+        <!-- Match History -->
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6">
+            <h3 class="text-xl font-bold text-white mb-4">Recent Match History</h3>
+            <div class="space-y-3">
+                <div class="bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-green-400 font-bold text-xl">W</span>
+                        <div>
+                            <p class="text-white font-semibold">vs Player 7</p>
+                            <p class="text-gray-400 text-sm">2 hours ago</p>
+                        </div>
+                    </div>
+                    <span class="text-white font-bold text-xl">11 - 8</span>
+                </div>
+                
+                <div class="bg-green-900 bg-opacity-30 border border-green-500 rounded-lg p-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-green-400 font-bold text-xl">W</span>
+                        <div>
+                            <p class="text-white font-semibold">vs Player 3</p>
+                            <p class="text-gray-400 text-sm">5 hours ago</p>
+                        </div>
+                    </div>
+                    <span class="text-white font-bold text-xl">11 - 7</span>
+                </div>
+                
+                <div class="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-red-400 font-bold text-xl">L</span>
+                        <div>
+                            <p class="text-white font-semibold">vs Player 1</p>
+                            <p class="text-gray-400 text-sm">1 day ago</p>
+                        </div>
+                    </div>
+                    <span class="text-white font-bold text-xl">9 - 11</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+                    
+                
+
+             <!-- Chat Section -->
+             <div id="chatSection" class="hidden">
+                <div class="max-w-6xl mx-auto">
+                    <h2 class="text-3xl font-bold text-white mb-6">Chat & Friends</h2>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Friends List Sidebar -->
+                        <div class="lg:col-span-1">
+                            <!-- Friend Requests -->
+                            <div class="bg-gray-800 rounded-lg shadow-xl p-4 mb-6">
+                                <h3 class="text-lg font-bold text-white mb-4 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                    </svg>
+                                    Friend Requests (2)
+                                </h3>
+                                <div class="space-y-3">
+                                    <div class="bg-gray-700 rounded-lg p-3">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-white font-semibold">Player 9</span>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button class="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-1 px-2 rounded transition duration-300">
+                                                Accept
+                                            </button>
+                                            <button class="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm py-1 px-2 rounded transition duration-300">
+                                                Decline
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-gray-700 rounded-lg p-3">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-white font-semibold">Player 10</span>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button class="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-1 px-2 rounded transition duration-300">
+                                                Accept
+                                            </button>
+                                            <button class="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm py-1 px-2 rounded transition duration-300">
+                                                Decline
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Friends List -->
+                            <div class="bg-gray-800 rounded-lg shadow-xl p-4">
+                                <h3 class="text-lg font-bold text-white mb-4 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                    </svg>
+                                    Friends (5)
+                                </h3>
+                                <div class="space-y-2 max-h-96 overflow-y-auto">
+                                    <div class="friend-item bg-gray-700 hover:bg-gray-600 rounded-lg p-3 cursor-pointer transition duration-300" data-friend="Player 1">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="relative">
+                                                    <div class="bg-purple-600 rounded-full w-10 h-10 flex items-center justify-center text-white font-bold">
+                                                        P1
+                                                    </div>
+                                                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-700"></div>
+                                                </div>
+                                                <div>
+                                                    <p class="text-white font-semibold">Player 1</p>
+                                                    <p class="text-green-400 text-xs">Online</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="friend-item bg-gray-700 hover:bg-gray-600 rounded-lg p-3 cursor-pointer transition duration-300" data-friend="Player 2">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="relative">
+                                                    <div class="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center text-white font-bold">
+                                                        P2
+                                                    </div>
+                                                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-700"></div>
+                                                </div>
+                                                <div>
+                                                    <p class="text-white font-semibold">Player 2</p>
+                                                    <p class="text-green-400 text-xs">Online</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="friend-item bg-gray-700 hover:bg-gray-600 rounded-lg p-3 cursor-pointer transition duration-300" data-friend="Player 3">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="relative">
+                                                    <div class="bg-red-600 rounded-full w-10 h-10 flex items-center justify-center text-white font-bold">
+                                                        P3
+                                                    </div>
+                                                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-gray-500 rounded-full border-2 border-gray-700"></div>
+                                                </div>
+                                                <div>
+                                                    <p class="text-white font-semibold">Player 3</p>
+                                                    <p class="text-gray-400 text-xs">Offline</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="friend-item bg-gray-700 hover:bg-gray-600 rounded-lg p-3 cursor-pointer transition duration-300" data-friend="Player 4">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="relative">
+                                                    <div class="bg-yellow-600 rounded-full w-10 h-10 flex items-center justify-center text-white font-bold">
+                                                        P4
+                                                    </div>
+                                                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-yellow-500 rounded-full border-2 border-gray-700"></div>
+                                                </div>
+                                                <div>
+                                                    <p class="text-white font-semibold">Player 4</p>
+                                                    <p class="text-yellow-400 text-xs">In Game</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="friend-item bg-gray-700 hover:bg-gray-600 rounded-lg p-3 cursor-pointer transition duration-300" data-friend="Player 5">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="relative">
+                                                    <div class="bg-green-600 rounded-full w-10 h-10 flex items-center justify-center text-white font-bold">
+                                                        P5
+                                                    </div>
+                                                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-700"></div>
+                                                </div>
+                                                <div>
+                                                    <p class="text-white font-semibold">Player 5</p>
+                                                    <p class="text-green-400 text-xs">Online</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Chat Area -->
+                        <div class="lg:col-span-2">
+                            <!-- No Chat Selected -->
+                            <div id="noChatSelected" class="bg-gray-800 rounded-lg shadow-xl p-8 flex flex-col items-center justify-center h-full min-h-[500px]">
+                                <svg class="w-24 h-24 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                </svg>
+                                <h3 class="text-xl font-bold text-gray-500 mb-2">No Chat Selected</h3>
+                                <p class="text-gray-600">Select a friend to start chatting</p>
+                            </div>
+                            
+                            <!-- Chat Window (Hidden Initially) -->
+                            <div id="chatWindow" class="bg-gray-800 rounded-lg shadow-xl hidden flex flex-col h-[600px]">
+                                <!-- Chat Header -->
+                                <div class="bg-gray-700 rounded-t-lg p-4 flex items-center justify-between border-b border-gray-600">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="bg-purple-600 rounded-full w-10 h-10 flex items-center justify-center text-white font-bold" id="chatAvatar">
+                                            P1
+                                        </div>
+                                        <div>
+                                            <h3 id="chatFriendName" class="text-white font-bold">Friend Name</h3>
+                                            <p id="chatFriendStatus" class="text-green-400 text-sm">Online</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button id="viewProfileBtn" class="text-gray-400 hover:text-white transition duration-300" title="View Profile">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                            </svg>
+                                        </button>
+                                        <button id="inviteToGameBtn" class="text-gray-400 hover:text-purple-400 transition duration-300" title="Invite to Game">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </button>
+                                        <button id="friendOptionsBtn" class="text-gray-400 hover:text-white transition duration-300" title="More Options">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Options Dropdown (Hidden Initially) -->
+                                <div id="friendOptionsMenu" class="hidden absolute right-4 mt-16 bg-gray-700 rounded-lg shadow-xl py-2 w-48 z-10">
+                                    <button class="w-full text-left px-4 py-2 text-red-400 hover:bg-gray-600 transition duration-300 flex items-center space-x-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6"/>
+                                        </svg>
+                                        <span>Unfriend</span>
+                                    </button>
+                                    <button class="w-full text-left px-4 py-2 text-red-400 hover:bg-gray-600 transition duration-300 flex items-center space-x-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                        </svg>
+                                        <span>Block</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Chat Messages -->
+                                <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-4">
+                                    <!-- Received Message -->
+                                    <div class="flex items-start space-x-2">
+                                        <div class="bg-purple-600 rounded-full w-8 h-8 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                            P1
+                                        </div>
+                                        <div>
+                                            <div class="bg-gray-700 rounded-lg p-3 max-w-xs">
+                                                <p class="text-white text-sm">Hey! Want to play a game?</p>
+                                            </div>
+                                            <p class="text-gray-500 text-xs mt-1 ml-2">10:30 AM</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Sent Message -->
+                                    <div class="flex items-start space-x-2 justify-end">
+                                        <div>
+                                            <div class="bg-purple-600 rounded-lg p-3 max-w-xs">
+                                                <p class="text-white text-sm">Sure! Let's do it!</p>
+                                            </div>
+                                            <p class="text-gray-500 text-xs mt-1 mr-2 text-right">10:31 AM</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Received Message -->
+                                    <div class="flex items-start space-x-2">
+                                        <div class="bg-purple-600 rounded-full w-8 h-8 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                            P1
+                                        </div>
+                                        <div>
+                                            <div class="bg-gray-700 rounded-lg p-3 max-w-xs">
+                                                <p class="text-white text-sm">Awesome! I'll create a room</p>
+                                            </div>
+                                            <p class="text-gray-500 text-xs mt-1 ml-2">10:32 AM</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Chat Input -->
+                                <div class="bg-gray-700 rounded-b-lg p-4 border-t border-gray-600">
+                                    <div class="flex space-x-2">
+                                        <input 
+                                            type="text" 
+                                            id="chatInput"
+                                            placeholder="Type a message..." 
+                                            class="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        >
+                                        <button id="sendMessageBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition duration-300 flex items-center space-x-2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                                            </svg>
+                                            <span>Send</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Settings Section -->
+            <div id="settingsSection" class="hidden">
+                <div class="max-w-4xl mx-auto">
+                    <h2 class="text-3xl font-bold text-white mb-6">Settings</h2>
+                    
+                    <!-- Account Settings -->
+                    <div class="bg-gray-800 rounded-lg shadow-xl p-6 mb-6">
+                        <h3 class="text-xl font-bold text-white mb-4 flex items-center">
+                            <svg class="w-6 h-6 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                            Account Settings
+                        </h3>
+                        
+                        <!-- Avatar Upload -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-300 mb-3">Profile Avatar</label>
+                            <div class="flex items-center space-x-6">
+                                <div class="relative">
+                                    <div id="currentAvatar" class="bg-purple-600 rounded-full w-24 h-24 flex items-center justify-center text-white text-3xl font-bold">
+                                        P1
+                                    </div>
+                                    <button class="absolute bottom-0 right-0 bg-purple-500 hover:bg-purple-600 rounded-full p-2 transition duration-300">
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div>
+                                    <input type="file" id="avatarUpload" accept="image/*" class="hidden">
+                                    <label for="avatarUpload" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer transition duration-300 inline-block">
+                                        Upload New Avatar
+                                    </label>
+                                    <p class="text-gray-400 text-sm mt-2">JPG, PNG or GIF. Max size 2MB</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Username -->
+                        <div class="mb-6">
+                            <label for="settingsUsername" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                            <div class="flex space-x-3">
+                                <input 
+                                    type="text" 
+                                    id="settingsUsername"
+                                    value="PlayerName"
+                                    class="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                >
+                                <button id="updateUsernameBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-300">
+                                    Update
+                                </button>
+                            </div>
+                            <p class="text-gray-500 text-sm mt-2">You can change your username once every 30 days</p>
+                        </div>
+                        
+                        <!-- Email -->
+                        <div class="mb-6">
+                            <label for="settingsEmail" class="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
+                            <input 
+                                type="email" 
+                                id="settingsEmail"
+                                value="player@example.com"
+                                class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            >
+                        </div>
+                    </div>
+                    
+                    <!-- Personal Information -->
+                    <div class="bg-gray-800 rounded-lg shadow-xl p-6 mb-6">
+                        <h3 class="text-xl font-bold text-white mb-4 flex items-center">
+                            <svg class="w-6 h-6 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Personal Information
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Date of Birth -->
+                            <div>
+                                <label for="settingsDOB" class="block text-sm font-medium text-gray-300 mb-2">Date of Birth</label>
+                                <input 
+                                    type="date" 
+                                    id="settingsDOB"
+                                    class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                >
+                            </div>
+                            
+                            <!-- Nationality -->
+                            <div>
+                                <label for="settingsNationality" class="block text-sm font-medium text-gray-300 mb-2">Nationality</label>
+                                <select 
+                                    id="settingsNationality"
+                                    class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                >
+                                    <option value="">Select your country</option>
+                                    <option value="US">🇺🇸 United States</option>
+                                    <option value="UK">🇬🇧 United Kingdom</option>
+                                    <option value="CA">🇨🇦 Canada</option>
+                                    <option value="AU">🇦🇺 Australia</option>
+                                    <option value="DE">🇩🇪 Germany</option>
+                                    <option value="FR">🇫🇷 France</option>
+                                    <option value="ES">🇪🇸 Spain</option>
+                                    <option value="IT">🇮🇹 Italy</option>
+                                    <option value="JP">🇯🇵 Japan</option>
+                                    <option value="CN">🇨🇳 China</option>
+                                    <option value="KR">🇰🇷 South Korea</option>
+                                    <option value="BR">🇧🇷 Brazil</option>
+                                    <option value="MX">🇲🇽 Mexico</option>
+                                    <option value="AE">🇦🇪 UAE</option>
+                                    <option value="SA">🇸🇦 Saudi Arabia</option>
+                                    <option value="EG">🇪🇬 Egypt</option>
+                                    <option value="IN">🇮🇳 India</option>
+                                    <option value="RU">🇷🇺 Russia</option>
+                                    <option value="ZA">🇿🇦 South Africa</option>
+                                    <option value="NL">🇳🇱 Netherlands</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Phone Number (Optional) -->
+                            <div>
+                                <label for="settingsPhone" class="block text-sm font-medium text-gray-300 mb-2">Phone Number (Optional)</label>
+                                <input 
+                                    type="tel" 
+                                    id="settingsPhone"
+                                    placeholder="+1 (555) 000-0000"
+                                    class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                >
+                            </div>
+                            
+                            <!-- Gender -->
+                            <div>
+                                <label for="settingsGender" class="block text-sm font-medium text-gray-300 mb-2">Gender</label>
+                                <select 
+                                    id="settingsGender"
+                                    class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                >
+                                    <option value="">Prefer not to say</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Save Changes Button -->
+                    <div class="flex justify-end space-x-4">
+                        <button class="bg-gray-700 hover:bg-gray-600 text-white font-semibold px-8 py-3 rounded-lg transition duration-300">
+                            Cancel
+                        </button>
+                        <button id="saveSettingsBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-8 py-3 rounded-lg transition duration-300 flex items-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>Save Changes</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module" src="./ts/app.ts"></script>
+</body>
+</html>
