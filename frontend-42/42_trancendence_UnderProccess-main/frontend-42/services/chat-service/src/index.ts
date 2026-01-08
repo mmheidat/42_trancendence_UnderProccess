@@ -1,0 +1,63 @@
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import websocket from '@fastify/websocket';
+import dotenv from 'dotenv';
+
+import { registerJwt } from './lib/jwt.js';
+import prisma from './lib/prisma.js';
+import chatRoutes from './routes/messages.js';
+import wsHandler from './routes/websocket.js';
+
+dotenv.config();
+
+const SERVICE_NAME = 'chat-service';
+const PORT = parseInt(process.env.PORT || '3004');
+
+console.log(`🚀 Starting ${SERVICE_NAME}...`);
+
+const fastify = Fastify({
+    logger: {
+        level: 'info',
+        transport: {
+            target: 'pino-pretty',
+            options: { colorize: true, translateTime: 'HH:MM:ss Z', ignore: 'pid,hostname' }
+        }
+    }
+});
+
+async function start(): Promise<void> {
+    try {
+        await prisma.$connect();
+        console.log('✅ Database connected');
+
+        await fastify.register(cors, {
+            origin: process.env.FRONTEND_URL || 'https://localhost:8443',
+            credentials: true
+        });
+        await fastify.register(websocket);
+        await registerJwt(fastify);
+
+        await fastify.register(chatRoutes, { prefix: '/api/chat' });
+        await fastify.register(wsHandler, { prefix: '/api/chat' });
+
+        fastify.get('/health', async () => ({
+            service: SERVICE_NAME,
+            status: 'ok',
+            timestamp: new Date().toISOString()
+        }));
+
+        await fastify.listen({ port: PORT, host: '0.0.0.0' });
+        console.log(`✅ ${SERVICE_NAME} running on port ${PORT}`);
+    } catch (err) {
+        console.error('❌ Failed to start:', err);
+        process.exit(1);
+    }
+}
+
+process.on('SIGINT', async () => {
+    await prisma.$disconnect();
+    await fastify.close();
+    process.exit(0);
+});
+
+start();

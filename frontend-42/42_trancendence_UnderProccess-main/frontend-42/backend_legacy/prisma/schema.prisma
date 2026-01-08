@@ -1,0 +1,91 @@
+// Prisma Schema for Pong Backend
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String   @default("") @map("password_hash")
+  displayName  String   @map("display_name")
+  avatarUrl    String?  @map("avatar_url")
+  dateOfBirth  String?  @map("date_of_birth")
+  nationality  String?
+  phone        String?
+  gender       String?
+  oauthProvider String? @map("oauth_provider")
+  oauthId      String?  @map("oauth_id")
+  isOnline     Boolean  @default(false) @map("is_online")
+  lastSeen     DateTime @default(now()) @map("last_seen")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  gamesAsPlayer1 Game[]    @relation("Player1Games")
+  gamesAsPlayer2 Game[]    @relation("Player2Games")
+  gamesWon       Game[]    @relation("WonGames")
+  friendsSent    Friend[]  @relation("FriendsSent")
+  friendsReceived Friend[] @relation("FriendsReceived")
+  messagesSent   Message[] @relation("MessagesSent")
+  messagesReceived Message[] @relation("MessagesReceived")
+
+  @@index([email])
+  @@index([username])
+  @@index([oauthProvider, oauthId])
+  @@map("users")
+}
+
+model Game {
+  id           Int      @id @default(autoincrement())
+  player1Id    Int      @map("player1_id")
+  player2Id    Int?     @map("player2_id")
+  player1Score Int      @default(0) @map("player1_score")
+  player2Score Int      @default(0) @map("player2_score")
+  winnerId     Int?     @map("winner_id")
+  gameMode     String   @default("pvp") @map("game_mode")
+  playedAt     DateTime @default(now()) @map("played_at")
+
+  // Relations
+  player1 User  @relation("Player1Games", fields: [player1Id], references: [id])
+  player2 User? @relation("Player2Games", fields: [player2Id], references: [id])
+  winner  User? @relation("WonGames", fields: [winnerId], references: [id])
+
+  @@map("games")
+}
+
+model Friend {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  friendId  Int      @map("friend_id")
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user   User @relation("FriendsSent", fields: [userId], references: [id])
+  friend User @relation("FriendsReceived", fields: [friendId], references: [id])
+
+  @@map("friends")
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  senderId   Int      @map("sender_id")
+  receiverId Int      @map("receiver_id")
+  content    String
+  read       Boolean  @default(false)
+  sentAt     DateTime @default(now()) @map("sent_at")
+
+  // Relations
+  sender   User @relation("MessagesSent", fields: [senderId], references: [id])
+  receiver User @relation("MessagesReceived", fields: [receiverId], references: [id])
+
+  @@map("messages")
+}
